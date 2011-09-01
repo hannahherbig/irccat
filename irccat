@@ -31,10 +31,11 @@ class IRCCat < GServer
     def serve(io)
         until io.eof?
             $client.privmsg($config.irc.channel, io.readline.chomp)
+            $client.send(:write)
         end
     end
 end
 
-IRCCat.instance.start # this starts a thread
+IRCCat.instance.start
 
 $client.io_loop
