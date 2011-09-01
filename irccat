@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+require 'gserver'
+require 'yaml'
+require 'singleton'
+
+require 'rhuidean'
+require 'hashie'
+
+$config = Hashie::Mash.new(YAML.load_file('config.yml'))
+$client = IRC::Client.new do |c|
+    c.server    = $config.irc.host
+    c.port      = $config.irc.port
+
+    c.nickname  = $config.irc.nick
+    c.username  = $config.irc.nick
+    c.realname  = $config.irc.nick
+
+    c.logger    = Logger.new($stdout)
+    c.log_level = :info
+end
+
+$client.on(IRC::Numeric::RPL_ENDOFMOTD) { $client.join($config.irc.channel) }
+
+class IRCCat < GServer
+    include Singleton
+
+    def initialize
+        super($config.tcp.port, $config.tcp.host)
+    end
+
+    def serve(io)
+        until io.eof?
+            $client.privmsg($config.irc.channel, io.readline.chomp)
+        end
+    end
+end
+
+IRCCat.instance.start # this starts a thread
+
+$client.io_loop
